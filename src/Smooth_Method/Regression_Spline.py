@@ -1,3 +1,4 @@
+
 import numpy as np
 from skfda.representation.basis import BSplineBasis
 
@@ -48,7 +49,7 @@ def truncate_func(df, candidates, cycle_cutoff):
                 (df['cycles'] <= cycle_cutoff)].copy()
     return truncated_df
 
-def auto(candidates, train_df, test_df, sensor_cols):
+def compute_smoothed_test(candidates, train_df, test_df, sensor_cols):
     results = {}   # lưu lại kết quả mỗi vòng, không để mất
 
     for i in candidates.keys():          # không hard-code range(1,101)
@@ -63,11 +64,11 @@ def auto(candidates, train_df, test_df, sensor_cols):
             results[i] = {"error": basis["error"]}
             continue
         B, L, B_eval = basis["B"], basis["L"], basis["B_eval"]
-
+        cycle_expected = basis["cycle"]
         test_sorted = test_sub.sort_values('cycles')
         test_cycle = test_sorted['cycles'].to_numpy()
 
-        if not np.allclose(test_cycle, cycle_validate):
+        if not np.allclose(test_cycle, cycle_expected):
             results[i] = {"error": "cycle test không khớp basis"}
             continue
 
@@ -85,7 +86,7 @@ def auto(candidates, train_df, test_df, sensor_cols):
             ].sort_values('cycles')
             cand_cycle = cand_sorted['cycles'].to_numpy()
 
-            if not np.allclose(cand_cycle, cycle_validate):
+            if not np.allclose(cand_cycle, cycle_expected):
                 continue  # bỏ qua candidate lỗi cycle, không làm crash cả vòng
 
             cand_eval = np.zeros((B_eval.shape[0], len(sensor_cols)))

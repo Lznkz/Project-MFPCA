@@ -17,13 +17,25 @@ the original paper.
 
 **Result: RMSE ≈ 25.8–26.0 (mean-based prediction), within ~4% of the original paper's reported RMSE (~25).**
 -------------------------------------------------------------------------------
+## Results
+| Prediction method                   | RMSE  |
+|-------------------------------------|-------|
+| Original paper (FLARE)              | 25.41 |
+| This work - Proposed Method (Mean)  | 25.98 |
+| This work - Propose Method (Median) | 27.73 |
+
+-------------------------------------------------------------------------------
+
+# **pipeline**
+
+# **Key Methodological**
+
+-------------------------------------------------------------------------------
+
 ## Reference 
-
-
 **Primary paper (reproduced in this repository):**
 > Yildirim, C., Lillo, R. E., & Franco-Pereira, A. M. (2025). Health Prognostics in Multi-Sensor Systems Based on Multivariate Functional Data Analysis. Available at SSRN 4907886.
 
 **Methodology & Key Reference**
 > Happ, C., & Greven, S. (2018). Multivariate functional principal component analysis for data observed on different (dimensional) domains. Journal of the American Statistical Association, 113(522), 649-659.
-# **Pipeline**
-# **Key Methodological**
+-------------------------------------------------------------------------------

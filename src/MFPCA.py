@@ -1,34 +1,12 @@
 import numpy as np
+import pandas as pd
 from scipy.interpolate import interp1d
 from skfda import FDataGrid
-import numpy as np
-import pandas as pd
 from scipy.linalg import eigh
 from skfda.preprocessing.dim_reduction import FPCA
 
 def build_fdata_grid(smoothed_df, sensor_cols, unit_col="unit_number",
                       cycle_col="t_registered", n_grid=100):
-    """
-    Nội suy các đường cong đã mượt (lưới cycle không đều) sang lưới
-    đồng nhất dense_grid, rồi đóng gói thành FDataGrid cho MFPCA.
-
-    Parameters
-    ----------
-    smoothed_df : pd.DataFrame
-        Kết quả từ compute_smoothed_train.
-    sensor_cols : list[str]
-    unit_col, cycle_col : str
-    n_grid : int
-        Số điểm trên lưới đồng nhất [0, 1].
-
-    Returns
-    -------
-    fd_multi : skfda.FDataGrid
-        shape data_matrix: (n_units, n_grid, n_sensors)
-    units : ndarray
-        Thứ tự unit_id tương ứng với chiều đầu tiên của fd_multi
-        (quan trọng để map ngược kết quả MFPCA sau này).
-    """
     dense_grid = np.linspace(0.0, 1.0, n_grid)
     units = smoothed_df[unit_col].unique()
 
@@ -56,27 +34,6 @@ def build_fdata_grid(smoothed_df, sensor_cols, unit_col="unit_number",
 
 
 def fit_univariate_fpca_per_sensor(fd_multi, sensor_cols, n_components=5):
-    """
-    Chạy FPCA đơn biến riêng cho từng sensor (bước 1 của Happ & Greven MFPCA),
-    rồi ghép toàn bộ scores lại thành 1 ma trận.
-
-    Parameters
-    ----------
-    fd_multi : skfda.FDataGrid
-        shape (n_units, n_grid, n_sensors) -- từ build_fdata_grid.
-    sensor_cols : list[str]
-    n_components : int
-        Số component giữ lại cho MỖI sensor (M_j trong công thức gốc).
-
-    Returns
-    -------
-    Xi : ndarray, shape (n_units, n_sensors * n_components)
-        Ma trận score đã ghép, cột được nhóm theo sensor
-        (n_components cột đầu = sensor 0, kế tiếp = sensor 1, ...).
-    fpca_list : list[FPCA]
-        FPCA object đã fit cho từng sensor, cần giữ lại để
-        transform dữ liệu mới (test) ở bước sau.
-    """
     scores_list = []
     fpca_list = []
 
@@ -84,12 +41,12 @@ def fit_univariate_fpca_per_sensor(fd_multi, sensor_cols, n_components=5):
         fd_j = fd_multi.coordinates[j]
         fpca_j = FPCA(n_components=n_components)
         fpca_j.fit(fd_j)
-        scores_j = fpca_j.transform(fd_j)     # (n_units, n_components)
+        scores_j = fpca_j.transform(fd_j)
 
         scores_list.append(scores_j)
         fpca_list.append(fpca_j)
 
-    Xi = np.hstack(scores_list)               # (n_units, n_sensors*n_components)
+    Xi = np.hstack(scores_list)
     return Xi, fpca_list
 
 
@@ -136,4 +93,5 @@ def run_mfpca(smoothed_df, sensor_cols, unit_col="unit_number", cycle_col="t_reg
     rho_scores, eigenvalues, C_hat, exp_var_df = compute_mfpca(
         Xi, n_mfpc, variance_threshold
     )
+    print(exp_var_df)
     return rho_scores, exp_var_df

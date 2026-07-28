@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
-from Youden import validate
+from src.Youden import validate
 
-def check_rmse(results, rul_true_df, unit_col="unit_number", true_col="RUL_true"):
+def check_rmse(results, rul_true_df, unit_col="unit_number", true_col="RUL"):
     rows = []
     for i, (topk_lifespan, RUL) in results.items():
         rows.append({
@@ -36,20 +36,10 @@ def check_rmse(results, rul_true_df, unit_col="unit_number", true_col="RUL_true"
 
 
 
-def sweep_k(D_total, candidates, train_df, rul_true_df,
-            k_values=range(3, 31)):
-    """
-    Quét qua nhiều giá trị k, tính RMSE (mean/median) cho mỗi k.
-
-    Returns
-    -------
-    sweep_df : pd.DataFrame
-        Cột: k, rmse_mean, rmse_median
-    """
+def sweep_k(result, rul_true_df, k_values=range(3, 31)):
     rows = []
     for k in k_values:
-        results = validate(D_total, train_df, candidates, k=k)
-        _, rmse = check_rmse(results, rul_true_df)
+        _, rmse = check_rmse(result, rul_true_df, k=k)
         rows.append({"k": k, "rmse_mean": rmse["mean"], "rmse_median": rmse["median"]})
 
     return pd.DataFrame(rows)

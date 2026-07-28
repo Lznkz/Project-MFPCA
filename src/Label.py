@@ -3,13 +3,67 @@ import pandas as pd
 from sklearn.mixture import GaussianMixture
 from scipy.optimize import brentq
 
+
+def Youden(labels, data):
+    labels = np.array(labels)
+    data = np.array(data)
+
+    # Xác định hướng
+    mean1 = data[labels == 1].mean()
+    mean0 = data[labels == 0].mean()
+    reverse = mean1 < mean0   # True nếu label=1 có data thấp hơn
+
+    thresholds = np.unique(data)
+    P = labels.sum()
+    N = len(labels) - P
+
+    best_J, best_thresh = -np.inf, None
+    best_sens, best_spec = 0, 0
+
+    for t in thresholds:
+        if reverse:
+            pred = (data <= t).astype(int)
+        else:
+            pred = (data >= t).astype(int)
+
+        TP = ((pred == 1) & (labels == 1)).sum()
+        TN = ((pred == 0) & (labels == 0)).sum()
+        sens = TP / P
+        spec = TN / N
+        J = sens + spec - 1
+
+        if J > best_J:
+            best_J, best_thresh = J, t
+            best_sens, best_spec = sens, spec
+
+    result= {
+        "cutoff": best_thresh,
+        "youden_J": best_J,
+        "sensitivity": best_sens,
+        "specificity": best_spec,
+        "direction": "<=" if reverse else ">="
+    }
+    return result
+
+def take_iv(df, sensor_cols, unit_col="unit_number"):
+    iv = df.groupby(unit_col)[sensor_cols].apply(lambda x: x.head(5).mean())
+    iv = iv.reset_index()   # đưa unit_number từ index thành cột
+    return iv
+
+def Youden_merged(label_train, iv_train_df):
+    labels = label_train['label']
+    result = {}
+    for col in iv_train_df:
+        value = Youden(labels, iv_train_df[col])
+        result[col] = value
+    return result
+
 def fit_gmm(df, rho_scores, random_state=0):
     units = df['unit_number'].unique()
     rho_scores = rho_scores[:, 0]
     gmm = GaussianMixture(n_components=2, random_state=random_state)
-    gmm.fit(rho_scores.reshape(-1, 1))
 
-    # True boundary từ posterior
+    gmm.fit(rho_scores.reshape(-1, 1))
     means = gmm.means_.flatten()
     boundary = brentq(
         lambda x: gmm.predict_proba([[x]])[0][np.argmax(means)] -
@@ -22,6 +76,7 @@ def fit_gmm(df, rho_scores, random_state=0):
         "unit_number": units,
         "label": labels,
     })
+    print(result['label'].value_counts())
     return result
 
 
@@ -89,13 +144,10 @@ def label_merged(df, iv_test_df, youden_info, sensor_cols,
         "label": final_label,
         "low_count": low_count.to_numpy(),
     })
-
+    print(result['label'].value_counts())
     return result
 
 def find_lifespan(df):
-    """
-    So we'll find the maximum cycle in df
-    """
     result = df.groupby('unit_number')['cycles'].max().reset_index()
     return result
 
@@ -122,17 +174,27 @@ def filter_candidates(train_df, test_df, label_train_df, label_test_df,
         ]
 
         if len(candidates) < k:
-            opposite_group = 1 - group_validate   # giả định label nhị phân 0/1
+            opposite_group = 1 - group_validate
             candidates = lifespan_train[
                 (lifespan_train["label"] == opposite_group) &
                 (lifespan_train[cycle_col] >= cycle_validate)
             ]
             fallback_log.append({
-                "unit_number": uid, "own_group": group_validate,
-                "n_own": (lifespan_train["label"] == group_validate).sum(),
+                "unit_number": int(uid),
+                "own_group": int(group_validate),
+                "n_own": int((lifespan_train["label"] == group_validate).sum()),
                 "n_opposite": len(candidates),
             })
 
         results[uid] = (candidates, cycle_validate)
 
-    return results, fallback_log
+    if fallback_log:
+        print(f"[filter_candidates] {len(fallback_log)}/{len(lifespan_test)} "
+              f"units fell back to the opposite group due to insufficient candidates :")
+        for log in fallback_log:
+            print(f"  - unit {log['unit_number']}: original_group={log['own_group']}, "
+                  f"n_own_group={log['n_own']}, n_opposite_valid={log['n_opposite']}")
+    else:
+        print(f"[filter_candidates] No units required fallback (k={k}).")
+
+    return results
