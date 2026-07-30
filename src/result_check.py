@@ -39,7 +39,8 @@ def check_rmse(results, rul_true_df, unit_col="unit_number", true_col="RUL"):
 def sweep_k(result, rul_true_df, k_values=range(3, 31)):
     rows = []
     for k in k_values:
-        _, rmse = check_rmse(result, rul_true_df, k=k)
+        results = validate(D_total, train_df, candidates, k=k)
+        _, rmse = check_rmse(results, rul_true_df)
         rows.append({"k": k, "rmse_mean": rmse["mean"], "rmse_median": rmse["median"]})
 
     return pd.DataFrame(rows)

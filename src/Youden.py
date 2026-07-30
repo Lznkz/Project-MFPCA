@@ -112,7 +112,7 @@ def validate(D_total, df, candidates, k=8):
     return results
 
 
-def ff(smoothed_test, df, candidates, k=8):
+def knn_apply(smoothed_test, df, candidates, k=8):
     normalized = normalize(smoothed_test)
     D_total = distance_cal(normalized)
     validate_info = validate(D_total, df, candidates, k=k)

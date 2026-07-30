@@ -1,0 +1,88 @@
+#+TITLE: MFPCA-RUL: Reproducing Multivariate Functional Data Analysis for RUL Prediction
+
+-----
+
+* Description
+This repository reproduces the multivariate functional data analysis (MFPCA)
+pipeline from Yildirim, Franco & Lillo for predicting Remaining Useful Life
+(RUL) of turbofan engines, applied to the NASA C-MAPSS FD001 dataset.
+
+The pipeline combines B-spline smoothing with fleet-wide GCV-optimized
+penalization, multivariate functional principal component analysis (Happ &
+Greven, 2018) for health index construction, and a k-NN similarity-matching
+scheme for RUL prediction on right-censored test trajectories.
+
+This project was built independently as part of an undergraduate research
+portfolio in Applied Mathematics, with a focus on faithful method reproduction
+and transparent reporting of implementation decisions not fully specified in
+the original paper.
+
+*Result: RMSE ≈ 26.0 (mean-based prediction), within ~4% of the original paper's reported RMSE (~25).*
+
+-----
+
+* Pipeline
+1. Time Domain Registration
+2. B-Spline Smoothing (From Discreet to Functional Data)
+3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)
+4. Censored Test-Trajectory Smoothing & Candidate Matching (Adaptive Regression Spline)
+5. Similarity-based Distance Calculation
+6. RUL Prediction & Interpretation
+
+-----
+
+* Key Methodological Decisions & Sensitivity Analysis
+
+** 1. Time Domain Registration [0, 1]
+Since each engine in the C-MAPSS dataset operates under varying degrees of
+initial wear and has a completely different lifespan (time to failure), the
+raw multivariate data does not share a common temporal frame. This step
+therefore rescales each engine's cycle index onto a common domain [0, 1],
+ensuring that degradation curves can be directly compared stage-by-stage
+(e.g., early-life vs. end-of-life) rather than cycle-by-cycle, without
+distorting the relative progression of degradation within each unit.
+
+** 2. B-Spline Smoothing (From Discrete to Functional Data)
+- So we all know that raw data is often noisy and discrete, this also applies to CMAPSS which we gonna using. This step transforms these into continuous, smooth functional curves using cubic B-Spline with a second-derivative roughness penalty
+- In general, I will follow author's paper, which uses *Generalized Cross-Validation* (GCV) to determine the smoothing parameter ("single $\lambda$ per sensor, optimized jointly across all training units"), quadratic penalty on the second derivative, cubic spline, and 24 knots with 24 basis function
+- By following the formulation of the original paper:
+$$GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)$$
+$$GCV_i(\lambda) = \frac{(n_i+1)\, MSE_i(\lambda)}{[\,\text{trace}(I - H_i(\lambda))\,]^2}$$
+
+where $n_i$ is the number of observed cycles for unit $i$, $MSE_i(\lambda)$
+is the residual mean squared error, and $H_i(\lambda)$ is the smoother hat
+matrix. By applying *Generalized-Eigenvalue Parameterization* (Demmler-Reinsch) used to evaluate $\text{trace}(H_i(\lambda))$ and
+$MSE_i(\lambda)$ efficiently boost compute efficiency. Also those was implemented from scratch in Python ('scipy', 'scikit-fda' basis objects), rather than relying on a higher-level smoothing-spline library
+
+
+** 3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)
+- By using *Multivariate FPCA* (Happ & Green, 2018) method, extends the Karhunen–Loève Expansion - which represents any smooth stochastic process as a weighted sum of orthogonal eigenfunction plus score. I was
+-
+
+**
+
+* Feature Extraction
+
+-----
+
+* Results
+| Prediction method                   |  RMSE | Correct Pred. |
+|-------------------------------------+-------+---------------|
+| Original paper (FLARE - Mean)       | 25.41 |             7 |
+| Original paper (FLARE - Median)     | 25.74 |             1 |
+| This work - Proposed Method (Mean)  | 25.98 |             2 |
+| This work - Propose Method (Median) | 27.73 |             1 |
+
+-----
+
+* Reference
+
+*Primary paper (reproduced in this repository):*
+#+BEGIN_QUOTE
+Yildirim, C., Lillo, R. E., & Franco-Pereira, A. M. (2025). Health Prognostics in Multi-Sensor Systems Based on Multivariate Functional Data Analysis. Available at SSRN 4907886.
+#+END_QUOTE
+
+*Methodology & Key Reference*
+#+BEGIN_QUOTE
+Happ, C., & Greven, S. (2018). Multivariate functional principal component analysis for data observed on different (dimensional) domains. Journal of the American Statistical Association, 113(522), 649-659.
+#+END_QUOTE
