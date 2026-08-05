@@ -52,6 +52,7 @@ def take_iv(df, sensor_cols, unit_col="unit_number"):
 
 def Youden_merged(label_train, iv_train_df):
     labels = label_train['label']
+    iv_train_df = iv_train_df.iloc[:, 1:]
     result = {}
     for col in iv_train_df:
         value = Youden(labels, iv_train_df[col])

@@ -201,4 +201,4 @@ def compute_smoothed_train(df, summary_df, unit_cache, sensor_cols,
     error_log = pd.DataFrame(error_rows)
     print('Smoothed Dataframe :')
     print(smoothed_df)
-    return smoothed_df #,coef_store, error_log
+    return smoothed_df ,coef_store #, error_log
