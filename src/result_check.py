@@ -36,7 +36,7 @@ def check_rmse(results, rul_true_df, unit_col="unit_number", true_col="RUL"):
 
 
 
-def sweep_k(result, rul_true_df, k_values=range(3, 31)):
+def sweep_k(result, rul_true_df, D_total, train_df, candidates, k_values=range(3, 31)):
     rows = []
     for k in k_values:
         results = validate(D_total, train_df, candidates, k=k)

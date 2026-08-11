@@ -66,11 +66,15 @@ def fit_gmm(df, rho_scores, random_state=0):
 
     gmm.fit(rho_scores.reshape(-1, 1))
     means = gmm.means_.flatten()
-    boundary = brentq(
-        lambda x: gmm.predict_proba([[x]])[0][np.argmax(means)] -
-                  gmm.predict_proba([[x]])[0][np.argmin(means)],
-        means.min(), means.max()
-    )
+    try:
+        boundary = brentq(
+            lambda x: gmm.predict_proba([[x]])[0][np.argmax(means)] -
+                      gmm.predict_proba([[x]])[0][np.argmin(means)],
+            means.min(), means.max()
+        )
+    except ValueError:
+        boundary = means.mean()
+        print(f"[fit_gmm] brentq failed to converge — falling back to midpoint boundary: {boundary:.4f}")
 
     labels = (rho_scores >= boundary).astype(int)
     result = pd.DataFrame({
