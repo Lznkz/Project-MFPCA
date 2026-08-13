@@ -1,35 +1,35 @@
 
 # Table of Contents
 
-1.  [Description](#org614934f)
-2.  [Methodology](#org39ed76d)
-    1.  [1. Time Domain Registration [0, 1]](#org3782538)
-    2.  [2. B-Spline Smoothing (From Discrete to Functional Data)](#orgaca1c12)
-    3.  [3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)](#orgcf28292)
-    4.  [4. Censored Test-Trajectory Smoothing & Candidate Matching (Adaptive Regression Spline)](#org09bc69a)
-    5.  [5. Similarity-based Distance Calculation](#orgd00800b)
-    6.  [6. RUL Prediction & Interpretation](#orga814692)
-3.  [Sensitivity Analysis](#org9ad7008)
-    1.  [Calculate distance using continuous curve or discrete point?](#org906c611)
-    2.  [Normalizing in Distance Calculation](#org7a247b6)
-    3.  [How did I really use Eq. 21](#org1b630c9)
-4.  [Results](#org0cd39c4)
-    1.  [RMSE table](#org6df8021)
-    2.  [Alarm Point Performance](#org3cf5ed9)
-5.  [Conclusion](#orgbfca481)
-6.  [Future Work](#org7be7061)
-    1.  [Normalization Refinement](#orgcaebaf7)
-    2.  [Extension to Multi-Operating-Condition Datasets](#org922d990)
-    3.  [Hybrid MFPCA + Neural Network Framework](#org47a8a69)
-7.  [Reference](#org01cb669)
-    1.  [Primary paper](#orgc93bf44)
-    2.  [Methodology & Key Reference](#org502aee0)
-    3.  [Extras](#org7fef16e)
+1.  [Description](#org8fd5673)
+2.  [Methodology](#org34f66e9)
+    1.  [1. Time Domain Registration [0, 1]](#org7b98fc1)
+    2.  [2. B-Spline Smoothing (From Discrete to Functional Data)](#orgcfb5d72)
+    3.  [3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)](#org70998eb)
+    4.  [4. Censored Test-Trajectory Smoothing & Candidate Matching (Adaptive Regression Spline)](#org5955d1a)
+    5.  [5. Similarity-based Distance Calculation](#orgead7ab5)
+    6.  [6. RUL Prediction & Interpretation](#org56ab95a)
+3.  [Sensitivity Analysis](#org93cfbd0)
+    1.  [Calculate distance using continuous curve or discrete point?](#org4e62efd)
+    2.  [Normalizing in Distance Calculation](#org69c1de4)
+    3.  [How did I really use Eq. 21](#org5aa8353)
+4.  [Results](#orgbf999c0)
+    1.  [RMSE table](#orgb932a4a)
+    2.  [Alarm Point Performance](#orgfb8323a)
+5.  [Conclusion](#org3b5a420)
+6.  [Future Work](#org98bf43a)
+    1.  [Normalization Refinement](#orge11e601)
+    2.  [Extension to Multi-Operating-Condition Datasets](#org28c395a)
+    3.  [Hybrid MFPCA + Neural Network Framework](#org764bddd)
+7.  [Reference](#orgc14c59f)
+    1.  [Primary paper](#org26c64ca)
+    2.  [Methodology & Key Reference](#orgddbc5c6)
+    3.  [Extras](#org5da39b6)
 
 ---
 
 
-<a id="org614934f"></a>
+<a id="org8fd5673"></a>
 
 # Description
 
@@ -53,12 +53,12 @@ reported RMSE (~25).**
 ---
 
 
-<a id="org39ed76d"></a>
+<a id="org34f66e9"></a>
 
 # Methodology
 
 
-<a id="org3782538"></a>
+<a id="org7b98fc1"></a>
 
 ## 1. Time Domain Registration [0, 1]
 
@@ -71,7 +71,7 @@ end-of-life) rather than cycle-by-cycle, without distorting the relative
 progression of degradation within each unit.
 
 
-<a id="orgaca1c12"></a>
+<a id="orgcfb5d72"></a>
 
 ## 2. B-Spline Smoothing (From Discrete to Functional Data)
 
@@ -84,20 +84,19 @@ progression of degradation within each unit.
     $\lambda$ per sensor, optimized jointly across all training units&rdquo;), quadratic
     penalty on the second derivative, cubic spline, 20 knots ⇒ 24 basis functions.
 -   By following the formulation of the original paper:
-
-$$GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)$$
-$$GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))]^2}$$
-where $n_i$ is the number of observed cycles for unit $i$, $MSE_i(\lambda)$ is
-the residual mean squared error, and $H_i(\lambda)$ is the smoother hat matrix. Generalized-Eigenvalue Parameterization (Demmler-Reinsch) was applied to
-evaluate $\text{trace}(H_i(\lambda))$ and $MSE_i(\lambda)$ efficiently, boosting
-computational performance. Also, these were implemented from scratch in Python (’scipy’,
-’scikit-fda’ basis objects), rather than relying on a higher-level
-smoothing-spline library.
+            $$GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)$$
+            $$GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))]^2}$$
+    where $n_i$ is the number of observed cycles for unit $i$, $MSE_i(\lambda)$ is
+    the residual mean squared error, and $H_i(\lambda)$ is the smoother hat matrix. Generalized-Eigenvalue Parameterization (Demmler-Reinsch) was applied to
+    evaluate $\text{trace}(H_i(\lambda))$ and $MSE_i(\lambda)$ efficiently, boosting
+    computational performance. Also, these were implemented from scratch in Python (’scipy’,
+    ’scikit-fda’ basis objects), rather than relying on a higher-level
+    smoothing-spline library.
 
 ---
 
 
-<a id="orgcf28292"></a>
+<a id="org70998eb"></a>
 
 ## 3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)
 
@@ -109,7 +108,7 @@ smoothing-spline library.
     actually be modeled as a mixture of two normal distributions. Using a
     Gaussian Mixture Model, the training fleet can be split into two health-state
     groups (&ldquo;low&rdquo;/&ldquo;big&rdquo; degradation rate).
--   From [this paper](#org7fef16e) , it has been established that each engine operates with
+-   From [this paper](#org5da39b6) , it has been established that each engine operates with
     unknown, varying degrees of initial wear and manufacturing variation — not all
     engines are actually 100% identical. The first principal component scores
     could be related to that wear and manufacturing variation. Therefore, using
@@ -123,7 +122,7 @@ categorized into one of two groups. Subsequently, candidate matches for each
 test unit are identified through validation with the respective training subset.
 
 
-<a id="org09bc69a"></a>
+<a id="org5955d1a"></a>
 
 ## 4. Censored Test-Trajectory Smoothing & Candidate Matching (Adaptive Regression Spline)
 
@@ -153,7 +152,7 @@ test unit are identified through validation with the respective training subset.
     sharing the same length.
 
 
-<a id="orgd00800b"></a>
+<a id="orgead7ab5"></a>
 
 ## 5. Similarity-based Distance Calculation
 
@@ -215,7 +214,7 @@ test unit are identified through validation with the respective training subset.
 ---
 
 
-<a id="orga814692"></a>
+<a id="org56ab95a"></a>
 
 ## 6. RUL Prediction & Interpretation
 
@@ -232,15 +231,15 @@ test unit are identified through validation with the respective training subset.
     **maintenance alarm point**: for each test engine, an alarm is triggered
     at 80% of the predicted total lifespan ($0.8 \times (T_{test} +
       \widehat{RUL})$), analogous to the alarm-point evaluation in the
-    original paper ([Result Table](#org3cf5ed9))
+    original paper ([Result Table](#orgfb8323a))
 
 
-<a id="org9ad7008"></a>
+<a id="org93cfbd0"></a>
 
 # Sensitivity Analysis
 
 
-<a id="org906c611"></a>
+<a id="org4e62efd"></a>
 
 ## Calculate distance using continuous curve or discrete point?
 
@@ -258,7 +257,7 @@ test unit are identified through validation with the respective training subset.
     across test units regardless of how many cycles were actually observed.
 
 
-<a id="org7a247b6"></a>
+<a id="org69c1de4"></a>
 
 ## Normalizing in Distance Calculation
 
@@ -275,7 +274,7 @@ test unit are identified through validation with the respective training subset.
     the simpler static formulation was kept for the final pipeline.
 
 
-<a id="org1b630c9"></a>
+<a id="org5aa8353"></a>
 
 ## How did I really use Eq. 21
 
@@ -363,12 +362,12 @@ per-sensor-summed formula avoids this, since each sensor contributes exactly
 one additive term regardless of its variance.
 
 
-<a id="org0cd39c4"></a>
+<a id="orgbf999c0"></a>
 
 # Results
 
 
-<a id="org6df8021"></a>
+<a id="orgb932a4a"></a>
 
 ## RMSE table
 
@@ -417,7 +416,7 @@ one additive term regardless of its variance.
 </table>
 
 
-<a id="org3cf5ed9"></a>
+<a id="orgfb8323a"></a>
 
 ## Alarm Point Performance
 
@@ -497,7 +496,7 @@ consistent with the RUL prediction variance observed in this reproduction
 ---
 
 
-<a id="orgbfca481"></a>
+<a id="org3b5a420"></a>
 
 # Conclusion
 
@@ -524,12 +523,12 @@ enhance the explainability of more complex data-driven systems — bridging the
 gap between predictive power and human understanding.
 
 
-<a id="org7be7061"></a>
+<a id="org98bf43a"></a>
 
 # Future Work
 
 
-<a id="orgcaebaf7"></a>
+<a id="orge11e601"></a>
 
 ## Normalization Refinement
 
@@ -541,7 +540,7 @@ direction was not pursued further, but may be worth revisiting with test units
 having longer observed trajectories.
 
 
-<a id="org922d990"></a>
+<a id="org28c395a"></a>
 
 ## Extension to Multi-Operating-Condition Datasets
 
@@ -553,7 +552,7 @@ these more challenging scenarios would test the generalizability of the
 functional data analysis approach under realistic industrial variability.
 
 
-<a id="org47a8a69"></a>
+<a id="org764bddd"></a>
 
 ## Hybrid MFPCA + Neural Network Framework
 
@@ -568,26 +567,26 @@ clarify whether interpretable features combined with learned predictors offer a
 practical advantage in prognostic accuracy.
 
 
-<a id="org01cb669"></a>
+<a id="orgc14c59f"></a>
 
 # Reference
 
 
-<a id="orgc93bf44"></a>
+<a id="org26c64ca"></a>
 
 ## Primary paper
 
 > Yildirim, C., Lillo, R. E., & Franco-Pereira, A. M. (2025). Health Prognostics in Multi-Sensor Systems Based on Multivariate Functional Data Analysis. Available at SSRN 4907886.
 
 
-<a id="org502aee0"></a>
+<a id="orgddbc5c6"></a>
 
 ## Methodology & Key Reference
 
 > Happ, C., & Greven, S. (2018). Multivariate functional principal component analysis for data observed on different (dimensional) domains. Journal of the American Statistical Association, 113(522), 649-659.
 
 
-<a id="org7fef16e"></a>
+<a id="org5da39b6"></a>
 
 ## Extras
 

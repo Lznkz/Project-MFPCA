@@ -47,14 +47,14 @@ progression of degradation within each unit.
   $\lambda$ per sensor, optimized jointly across all training units"), quadratic
   penalty on the second derivative, cubic spline, 20 knots ⇒ 24 basis functions.
 - By following the formulation of the original paper:
-$$GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)$$
-$$GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))]^2}$$
-where $n_i$ is the number of observed cycles for unit $i$, $MSE_i(\lambda)$ is
-the residual mean squared error, and $H_i(\lambda)$ is the smoother hat matrix. Generalized-Eigenvalue Parameterization (Demmler-Reinsch) was applied to
-evaluate $\text{trace}(H_i(\lambda))$ and $MSE_i(\lambda)$ efficiently, boosting
-computational performance. Also, these were implemented from scratch in Python (’scipy’,
-’scikit-fda’ basis objects), rather than relying on a higher-level
-smoothing-spline library.
+            $$GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)$$
+            $$GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))]^2}$$
+    where $n_i$ is the number of observed cycles for unit $i$, $MSE_i(\lambda)$ is
+    the residual mean squared error, and $H_i(\lambda)$ is the smoother hat matrix. Generalized-Eigenvalue Parameterization (Demmler-Reinsch) was applied to
+    evaluate $\text{trace}(H_i(\lambda))$ and $MSE_i(\lambda)$ efficiently, boosting
+    computational performance. Also, these were implemented from scratch in Python (’scipy’,
+    ’scikit-fda’ basis objects), rather than relying on a higher-level
+    smoothing-spline library.
 -----
 ** 3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)
 :PROPERTIES:
