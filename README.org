@@ -57,7 +57,7 @@ progression of degradation within each unit.
   penalty on the second derivative, cubic spline, 20 knots ⇒ 24 basis functions.
 - By following the formulation of the original paper:
 $$GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)$$
-$$GCV_i(\lambda) = \frac{(n_i+1)\, MSE_i(\lambda)}{[\,\text{trace}(I - H_i(\lambda))\,]^2}$$
+$$GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))\2}$$
 
 where $n_i$ is the number of observed cycles for unit $i$, $MSE_i(\lambda)$ is
 the residual mean squared error, and $H_i(\lambda)$ is the smoother hat matrix.
@@ -131,12 +131,10 @@ test unit are identified through validation with the respective training subset.
 - Before computing distance, each sensor's smoothed values are normalized by
   dividing by the sensor's mean value (computed across the full training set),
   following Eq. (20) of the original paper — this prevents sensors with larger
-  raw magnitude (e.g., temperature, ~hundreds) from dominating the distance
+  raw magnitude (e.g., temperature, hundreds) from dominating the distance
   metric over sensors with smaller magnitude (e.g., pressure ratios)
-  $$
-  u_{ij}^*(t) = \frac{X_{ij}^{*}(t)}{\bar X_{j}^{*}(t)} \quad \text{i=1,....,n} \quad \text{j=1,....,J}
-  $$
-  where ${X_{ij}^{ *}(t)}$ is the sensor value of the ith system and the jth
+  $$u_{ij}^{\ast}(t) = \frac{{X_{ij}^{\ast}(t)}{\bar X_{j}^{\ast}(t)} \quad \text{i=1,....,n} \quad \text{j=1,....,J}$$
+  where ${X_{ij}^{\ast}(t)}$ is the sensor value of the ith system and the jth
   sensor at time t, $\bar{X}_{j}^{*}(t)$ is the mean of the jth sensor, and J is the
   number of sensors
 - After that, the distance between the two engine curves in a multivariate sense
@@ -313,29 +311,13 @@ underperformed the simpler static-mean normalization in this study, this
 direction was not pursued further, but may be worth revisiting with test units
 having longer observed trajectories.
 
-** Physics-Informed Degradation Modeling
-The current pipeline treats each sensor curve as a purely statistical object —
-smoothed via B-splines without encoding any physical knowledge of the underlying
-degradation process. A prior attempt was made to apply Multi-Group SINDy
-(MGSINDy) — a sparse equation-discovery algorithm — to identify governing
-degradation dynamics directly from the C-MAPSS sensor data for RUL prediction.
-However, this approach did not yield satisfactory results, likely due to the
-high noise level and the complexity of multivariate degradation interactions in
-this dataset.
-
-This experience suggests that the challenge may lie less in /discovering/
-degradation equations from data and more in /enforcing/ known physical structure
-during the learning process. Since the C-MAPSS dataset is generated from a
-thermodynamic simulation with known governing equations, Physics-Informed Neural
-Networks (PINNs) offer a promising alternative: rather than attempting to
-recover equations from noisy observations (as SINDy does), PINNs embed physical
-constraints (e.g., monotonic degradation trends, conservation laws) directly
-into the curve-fitting step via the loss function. This would preserve the
-interpretability that motivates this work while potentially capturing
-degradation dynamics that B-splines cannot represent. A combined SINDy → PINN
-pipeline — where partially discovered structure informs the physics loss — also
-remains an open direction worth exploring.
-
+** Extension to Multi-Operating-Condition Datasets
+This reproduction is limited to the FD001 subset (single operating condition,
+single fault mode). The FD002–FD004 subsets introduce six operating conditions
+and multiple fault modes, requiring operating-condition-aware normalization
+before the MFPCA step can be meaningfully applied. Extending the pipeline to
+these more challenging scenarios would test the generalizability of the
+functional data analysis approach under realistic industrial variability.
 ** Hybrid MFPCA + Neural Network Framework
 The k-NN similarity-matching scheme used for RUL prediction is simple and
 transparent, but may underutilize the information captured by the MFPCA health
@@ -347,13 +329,6 @@ current statistical pipeline and end-to-end deep learning baselines would
 clarify whether interpretable features combined with learned predictors offer a
 practical advantage in prognostic accuracy.
 
-** Extension to Multi-Operating-Condition Datasets
-This reproduction is limited to the FD001 subset (single operating condition,
-single fault mode). The FD002–FD004 subsets introduce six operating conditions
-and multiple fault modes, requiring operating-condition-aware normalization
-before the MFPCA step can be meaningfully applied. Extending the pipeline to
-these more challenging scenarios would test the generalizability of the
-functional data analysis approach under realistic industrial variability.
 * Reference
 
 ** *Primary paper (reproduced in this repository):*
