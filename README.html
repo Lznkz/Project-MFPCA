@@ -1,0 +1,911 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2026-08-13 T5 18:36 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MFPCA-RUL: Reproducing Multivariate Functional Data Analysis for RUL Prediction</title>
+<meta name="author" content="lznk" />
+<meta name="generator" content="Org Mode" />
+<style type="text/css">
+  #content { max-width: 60em; margin: auto; }
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #e6e6e6;
+    border-radius: 3px;
+    background-color: #f2f2f2;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: auto;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    padding: 3px;
+    color: #555;
+    background-color: #f2f2f299;
+  }
+  pre.src:hover:before { display: inline; margin-top: 14px;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-authinfo::before { content: 'Authinfo'; }
+  pre.src-c:before { content: 'C'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'JavaScript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { }
+</style>
+<script>
+  window.MathJax = {
+    tex: {
+      ams: {
+        multlineWidth: '85%'
+      },
+      tags: 'ams',
+      tagSide: 'right',
+      tagIndent: '.8em'
+    },
+    chtml: {
+      scale: 1.0,
+      displayAlign: 'center',
+      displayIndent: '0em'
+    },
+    svg: {
+      scale: 1.0,
+      displayAlign: 'center',
+      displayIndent: '0em'
+    },
+    output: {
+      font: 'mathjax-modern',
+      displayOverflow: 'overflow'
+    }
+  };
+</script>
+
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">MFPCA-RUL: Reproducing Multivariate Functional Data Analysis for RUL Prediction</h1>
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#orga320e90">1. Description</a></li>
+<li><a href="#org6c1d93d">2. Methodology</a>
+<ul>
+<li><a href="#orge77800d">2.1. 1. Time Domain Registration [0, 1]</a></li>
+<li><a href="#orgf3a6088">2.2. 2. B-Spline Smoothing (From Discrete to Functional Data)</a></li>
+<li><a href="#orgda33fe8">2.3. 3. Feature Extraction &amp; Health-State Labeling (MFPCA, GMM, Youden Index)</a></li>
+<li><a href="#orga4dfde9">2.4. 4. Censored Test-Trajectory Smoothing &amp; Candidate Matching (Adaptive Regression Spline)</a></li>
+<li><a href="#org986aa73">2.5. 5. Similarity-based Distance Calculation</a></li>
+<li><a href="#org0e0d5f6">2.6. 6. RUL Prediction &amp; Interpretation</a></li>
+</ul>
+</li>
+<li><a href="#orge4a980f">3. Sensitivity Analysis</a>
+<ul>
+<li><a href="#orga4d59d4">3.1. Calculate distance using continuous curve or discrete point?</a></li>
+<li><a href="#org260ac0c">3.2. Normalizing in Distance Calculation</a></li>
+<li><a href="#org667dc1e">3.3. How did I really use Eq. 21</a></li>
+</ul>
+</li>
+<li><a href="#org4425891">4. Results</a>
+<ul>
+<li><a href="#org26b5a0c">4.1. RMSE table</a></li>
+<li><a href="#org225ea64">4.2. Alarm Point Performance</a></li>
+</ul>
+</li>
+<li><a href="#orgcf6f67f">5. Conclusion</a></li>
+<li><a href="#orge31d594">6. Future Work</a>
+<ul>
+<li><a href="#orge206be4">6.1. Normalization Refinement</a></li>
+<li><a href="#org8870b8d">6.2. Extension to Multi-Operating-Condition Datasets</a></li>
+<li><a href="#org89b2202">6.3. Hybrid MFPCA + Neural Network Framework</a></li>
+</ul>
+</li>
+<li><a href="#org52956c1">7. Reference</a>
+<ul>
+<li><a href="#org9712417">7.1. Primary paper</a></li>
+<li><a href="#org37f8f4b">7.2. Methodology &amp; Key Reference</a></li>
+<li><a href="#orgbddc560">7.3. Extras</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<hr />
+<div id="outline-container-orga320e90" class="outline-2">
+<h2 id="orga320e90"><span class="section-number-2">1.</span> Description</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+This repository reproduces the multivariate functional data analysis (MFPCA)
+pipeline from Yildirim, Franco &amp; Lillo for predicting Remaining Useful Life
+(RUL) of turbofan engines, applied to the NASA C-MAPSS FD001 dataset.
+</p>
+
+<p>
+The pipeline combines B-spline smoothing with fleet-wide GCV-optimized
+penalization, multivariate functional principal component analysis (Happ &amp;
+Greven, 2018) for health index construction, and a k-NN similarity-matching
+scheme for RUL prediction on right-censored test trajectories.
+</p>
+
+<p>
+This project was built independently as part of an undergraduate research
+portfolio in Applied Mathematics, with a focus on faithful method reproduction
+and transparent reporting of implementation decisions not fully specified in
+the original paper.
+</p>
+
+<p>
+<b>Result: RMSE ≈ 26.0 (mean-based prediction), within ~4% of the original paper&rsquo;s
+reported RMSE (~25).</b>
+</p>
+
+<hr />
+</div>
+</div>
+<div id="outline-container-org6c1d93d" class="outline-2">
+<h2 id="org6c1d93d"><span class="section-number-2">2.</span> Methodology</h2>
+<div class="outline-text-2" id="text-2">
+</div>
+<div id="outline-container-orge77800d" class="outline-3">
+<h3 id="orge77800d"><span class="section-number-3">2.1.</span> 1. Time Domain Registration [0, 1]</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+Since each engine in the C-MAPSS dataset operates under varying degrees of
+initial wear and has a completely different lifespan (time to failure), the raw
+multivariate data does not share a common temporal frame. This step therefore
+rescales each engine&rsquo;s cycle index onto a common domain [0, 1], ensuring that
+degradation curves can be directly compared stage-by-stage (e.g., early-life vs.
+end-of-life) rather than cycle-by-cycle, without distorting the relative
+progression of degradation within each unit.
+</p>
+</div>
+</div>
+<div id="outline-container-orgf3a6088" class="outline-3">
+<h3 id="orgf3a6088"><span class="section-number-3">2.2.</span> 2. B-Spline Smoothing (From Discrete to Functional Data)</h3>
+<div class="outline-text-3" id="text-2-2">
+<ul class="org-ul">
+<li>Raw sensor data is typically noisy and discrete, and this also applies to
+the C-MAPSS dataset used here. This step transforms these into continuous,
+smooth functional curves using cubic B-Spline with a second-derivative
+roughness penalty.</li>
+<li>In general, this implementation follows the original paper, which uses <b>Generalized
+Cross-Validation</b> (GCV) to determine the smoothing parameter (&ldquo;single
+\(\lambda\) per sensor, optimized jointly across all training units&rdquo;), quadratic
+penalty on the second derivative, cubic spline, 20 knots ⇒ 24 basis functions.</li>
+<li>By following the formulation of the original paper:</li>
+</ul>
+<p>
+\[GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)\]
+\[GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))]^2}\]
+where \(n_i\) is the number of observed cycles for unit \(i\), \(MSE_i(\lambda)\) is
+the residual mean squared error, and \(H_i(\lambda)\) is the smoother hat matrix. Generalized-Eigenvalue Parameterization (Demmler-Reinsch) was applied to
+evaluate \(\text{trace}(H_i(\lambda))\) and \(MSE_i(\lambda)\) efficiently, boosting
+computational performance. Also, these were implemented from scratch in Python (’scipy’,
+’scikit-fda’ basis objects), rather than relying on a higher-level
+smoothing-spline library.
+</p>
+<hr />
+</div>
+</div>
+<div id="outline-container-orgda33fe8" class="outline-3">
+<h3 id="orgda33fe8"><span class="section-number-3">2.3.</span> 3. Feature Extraction &amp; Health-State Labeling (MFPCA, GMM, Youden Index)</h3>
+<div class="outline-text-3" id="text-2-3">
+<ul class="org-ul">
+<li><b>Multivariate FPCA</b> (Happ &amp; Greven, 2018) method extends the Karhunen–Loève
+Expansion, which was used to overcome the complexity of physical degradation
+dynamics in the CMAPSS dataset. As a result, <b>95.1%</b> of variance is explained by
+only the first principal component.</li>
+<li>When examining the MFPC scores of the first PC in the training dataset, it can
+actually be modeled as a mixture of two normal distributions. Using a
+Gaussian Mixture Model, the training fleet can be split into two health-state
+groups (&ldquo;low&rdquo;/&ldquo;big&rdquo; degradation rate).</li>
+<li>From <a href="#orgbddc560">this paper</a> , it has been established that each engine operates with
+unknown, varying degrees of initial wear and manufacturing variation — not all
+engines are actually 100% identical. The first principal component scores
+could be related to that wear and manufacturing variation. Therefore, using
+the idea of the initial value of each sensor, all units can be labeled into two
+health-states. Using the <b>Youden Index</b>, we validate this classification with a
+mean Youden&rsquo;s J statistic of 0.90 averaged across all 9 sensors in the training dataset, indicating
+strong discriminative power of the initial-value-based thresholds.</li>
+<li>By applying the Youden Index cutoff, each unit in the testing dataset can be</li>
+</ul>
+<p>
+categorized into one of two groups. Subsequently, candidate matches for each
+test unit are identified through validation with the respective training subset.
+</p>
+</div>
+</div>
+<div id="outline-container-orga4dfde9" class="outline-3">
+<h3 id="orga4dfde9"><span class="section-number-3">2.4.</span> 4. Censored Test-Trajectory Smoothing &amp; Candidate Matching (Adaptive Regression Spline)</h3>
+<div class="outline-text-3" id="text-2-4">
+<ul class="org-ul">
+<li>The units in the test dataset have varying lengths of recorded
+cycles, which makes it very challenging to actually reuse the smoothing
+parameter λ from the training dataset. (Also, in the paper, the author did not
+actually mention which method he used for this process.)</li>
+<li><p>
+Therefore, instead of registering test units, both test units and training
+candidates (which are truncated to the same cycles as their test unit) are
+compared directly on the raw cycle domain [1, T<sub>test</sub>], where T<sub>test</sub> is the
+number of cycles observed so far for a given test unit. As a result, an
+<b>Adaptive Regression Spline</b> was used for each test unit and its candidates.
+</p>
+<blockquote>
+<p>
+There is one additional condition to filter candidates, which keeps only training
+engines that have outlived the relevant test engine. On the other hand,
+training engines that fail earlier than the relevant test engine must be
+eliminated. In this dataset, there is only one exception that didn&rsquo;t have any
+candidates in its group; this may be caused by its initial value being very
+close to the Youden Index cutoff point. Although the author did not mention a
+solution for this case, the adopted approach is to switch the candidate search to the
+opposite health-state group.
+</p>
+</blockquote></li>
+<li>With adaptive knot selection (1 knot per ~4 observations), we address the
+varying T<sub>test</sub> across units — a fixed basis size would otherwise cause
+underfitting on long trajectories or rank-deficiency on short ones. Also,
+<b>Cholesky Decomposition</b> was cached per unique T<sub>test</sub> value (not per unit) to
+avoid redundant computation across the many (test unit, candidate) pairs
+sharing the same length.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org986aa73" class="outline-3">
+<h3 id="org986aa73"><span class="section-number-3">2.5.</span> 5. Similarity-based Distance Calculation</h3>
+<div class="outline-text-3" id="text-2-5">
+<ul class="org-ul">
+<li>The next step is to calculate the distance between a test system’s sensor
+curve and training system curves in the same group. By using Euclidean
+(\(L^2\)) distance as it is the natural measure between two points in Euclidean
+space and represents the length of the line segment connecting two points</li>
+<li><p>
+Before computing distance, each sensor’s smoothed values are normalized by
+dividing by the sensor’s mean value (computed across the full training set),
+following Eq. (20) of the original paper — this prevents sensors with larger
+raw magnitude (e.g., temperature, hundreds) from dominating the distance
+metric over sensors with smaller magnitude (e.g., pressure ratios)
+</p>
+
+<p>
+\[u_{ij}^{\ast}(t) = \frac{X_{ij}^{\ast}(t)}{\bar{X}_{j}^{\ast}(t)} \quad
+  \text{i=1,....,n} \quad \text{j=1,....,J}\]
+</p>
+
+<p>
+where \(X_{ij}^{\ast}(t)\) is the sensor value of the ith system and the jth
+sensor at time t, \(\bar{X}_{j}^{*}(t)\) is the mean of the jth sensor, and J is
+the number of sensors.
+</p></li>
+
+<li><p>
+After that, the distance between the two engine curves in a multivariate sense
+is expressed as:
+</p>
+
+<p>
+\[d_{x,y}(t) = \sqrt{\sum_{j=1}^{J} (x_j(t) - y_j(t))^2}\]
+</p></li>
+</ul>
+<hr />
+<ul class="org-ul">
+<li>Before computing distance, each sensor&rsquo;s evaluated values are normalized by
+dividing by \(\bar X_j(t)\), the mean (or median) of that sensor&rsquo;s value across
+candidates at each of the 20 grid points, following the intent of Eq. (20) of
+the original paper — this prevents sensors with larger raw magnitude from
+dominating the distance metric over sensors with smaller magnitude.</li>
+</ul>
+<blockquote>
+<p>
+Several time-varying normalization schemes were tested (mean vs. median as the
+center, with and without an additional per-timepoint standard deviation
+scaling). All variants performed similarly or worse than the simplest
+static-mean normalization; standard-deviation scaling in particular tended to
+flatten meaningful variation across candidates and degraded RMSE. The original
+static-mean formulation was therefore kept.
+</p>
+</blockquote>
+<ul class="org-ul">
+<li>Since candidate trajectories have varying lengths (T<sub>test</sub>), each fitted spline
+is evaluated at a fixed grid of 20 points spanning [1, T<sub>test</sub>], rather than at
+the full set of raw observation cycles. This provides a common, fixed-length
+representation for every (test unit, candidate) pair, which is required before
+a pointwise Euclidean distance can be computed — comparing curves of different
+raw lengths directly would otherwise be undefined.</li>
+<li>Two formulations of multivariate Euclidean distance were then compared:</li>
+</ul>
+<blockquote>
+<p>
+Empirically, per-sensor sum reduced RMSE from ~30 to 25.99, matching the
+author&rsquo;s actual implementation rather than the text of Eq. (21). Investigating
+why: post-normalization variance varies roughly 60-fold across the 9 sensors
+(from \(1.1e-7\) for T24 to \(7.0e-6\) for T50). Under the joint formula, this imbalance
+lets 2-3 high-variance sensors dominate the squared sum, effectively discarding
+information from the remaining sensors. The per-sensor-summed formula avoids
+this by weighting each sensor&rsquo;s contribution additively rather than
+quadratically-jointly, explaining both its empirical advantage and its agreement
+with the author&rsquo;s code.
+</p>
+</blockquote>
+<hr />
+</div>
+</div>
+<div id="outline-container-org0e0d5f6" class="outline-3">
+<h3 id="org0e0d5f6"><span class="section-number-3">2.6.</span> 6. RUL Prediction &amp; Interpretation</h3>
+<div class="outline-text-3" id="text-2-6">
+<ul class="org-ul">
+<li>After computing the distance between each test engine and its candidates,
+the \(k\) nearest training candidates (minimum distance) are selected for
+RUL prediction. Each candidate&rsquo;s RUL is defined as its full lifespan
+minus the test engine&rsquo;s observed cycles T<sub>test</sub>; the final RUL
+prediction is the mean or median of the \(k\) candidates&rsquo; RUL
+values.</li>
+<li>Beyond RUL point prediction, the first and second derivatives of the
+smoothed health-index curves are also computed for better interpretability,
+following the interpretability approach described in the original paper.</li>
+<li>The second derivative in particular is used to define a dynamic
+<b>maintenance alarm point</b>: for each test engine, an alarm is triggered
+at 80% of the predicted total lifespan (\(0.8 \times (T_{test} +
+  \widehat{RUL})\)), analogous to the alarm-point evaluation in the
+original paper (<a href="#org225ea64">Result Table</a>)</li>
+</ul>
+</div>
+</div>
+</div>
+<div id="outline-container-orge4a980f" class="outline-2">
+<h2 id="orge4a980f"><span class="section-number-2">3.</span> Sensitivity Analysis</h2>
+<div class="outline-text-2" id="text-3">
+</div>
+<div id="outline-container-orga4d59d4" class="outline-3">
+<h3 id="orga4d59d4"><span class="section-number-3">3.1.</span> Calculate distance using continuous curve or discrete point?</h3>
+<div class="outline-text-3" id="text-3-1">
+<ul class="org-ul">
+<li>As shown in Eq. 21, the use of \(d_{x,y}(t)\) suggests the author intended
+to calculate distance over a continuous curve. However, as previously
+mentioned, each test unit has a different number of observed cycles
+(T<sub>test</sub>). If distance were accumulated over every raw cycle, a unit
+with 200 observed cycles would sum many more terms than a unit with 50
+cycles — making the resulting total distance not directly comparable
+across test units, independent of how similar the curves actually are.</li>
+<li>To resolve this, the fitted spline for each test unit and its candidates
+is instead evaluated at 20 discrete, equally spaced points spanning its
+own observed range [1, T<sub>test</sub>]. This gives every (test unit, candidate)
+comparison a fixed-length representation, making distances comparable
+across test units regardless of how many cycles were actually observed.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org260ac0c" class="outline-3">
+<h3 id="org260ac0c"><span class="section-number-3">3.2.</span> Normalizing in Distance Calculation</h3>
+<div class="outline-text-3" id="text-3-2">
+<ul class="org-ul">
+<li>In Eq. 20, \(X_{i,j}^{\ast}(t)\) is normalized by \(\bar X_j^{*}(t)\), described
+in the paper only as &ldquo;the mean of the jth sensor&rdquo;. This leaves an ambiguity:
+is the mean taken across time (i.e., a single scalar per sensor, constant
+across the 20 grid points), or across units at each fixed time point (i.e., a
+value that varies with \(t\))? The paper&rsquo;s notation \(\bar X_j^{*}(t)\) — which
+still carries a \((t)\) — suggests the latter, but this was not explicitly
+confirmed.</li>
+<li>Both interpretations were tested: a static per-sensor mean (constant across
+time) and a time-varying mean (recomputed at each of the 20 points from the
+candidate group). Empirically, neither choice affected RMSE meaningfully, so
+the simpler static formulation was kept for the final pipeline.</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org667dc1e" class="outline-3">
+<h3 id="org667dc1e"><span class="section-number-3">3.3.</span> How did I really use Eq. 21</h3>
+<div class="outline-text-3" id="text-3-3">
+<ul class="org-ul">
+<li><p>
+While the previous section addressed how \(\bar X_j^{\ast}(t)\) is computed, Eq.
+21 leaves a separate question open: <b>how are the 9 per-sensor squared
+differences combined</b> into a single distance? Two interpretations are possible:
+</p>
+<ul class="org-ul">
+<li>The Aggregated Euclidean Distance (Denoted as \(D_{joint}\))</li>
+</ul>
+<p>
+\[D_{joint} = \sqrt{\sum_{j=1}^{9}\sum_{t=1}^{20} (x_j(t) - y_j(t))^2}\]
+</p>
+<ul class="org-ul">
+<li>The Independent Approach (Denoted as \(D_{sum}\))</li>
+</ul>
+<p>
+\[D_{sum} = \sum_{j=1}^{9} \sqrt{\sum_{t=1}^{20} (x_j(t) - y_j(t))^2}\]
+</p></li>
+<li>Unlike the normalization question, this choice had a large effect: per-sensor
+sum reduced RMSE substantially over the joint formula.  By checking
+post-normalization variance across the 9 sensors, the reason becomes clear.</li>
+</ul>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Sensor</th>
+<th scope="col" class="org-right">Variance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">T50</td>
+<td class="org-right">6.749795e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">Ps30</td>
+<td class="org-right">5.368794e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">W31</td>
+<td class="org-right">3.871824e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">W32</td>
+<td class="org-right">3.719131e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">BPR</td>
+<td class="org-right">3.390728e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">T30</td>
+<td class="org-right">2.795378e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">P30</td>
+<td class="org-right">4.707642e-07</td>
+</tr>
+
+<tr>
+<td class="org-left">phi</td>
+<td class="org-right">3.662537e-07</td>
+</tr>
+
+<tr>
+<td class="org-left">T24</td>
+<td class="org-right">1.109373e-07</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+-&gt; It ranges roughly 60-fold, from 1.1e-7 (T24) to 6.75e-6 (T50). Under the
+joint formula, squaring before summing lets these 2-3 high-variance sensors
+dominate the total distance, effectively silencing the remaining sensors. The
+per-sensor-summed formula avoids this, since each sensor contributes exactly
+one additive term regardless of its variance.
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org4425891" class="outline-2">
+<h2 id="org4425891"><span class="section-number-2">4.</span> Results</h2>
+<div class="outline-text-2" id="text-4">
+</div>
+<div id="outline-container-org26b5a0c" class="outline-3">
+<h3 id="org26b5a0c"><span class="section-number-3">4.1.</span> RMSE table</h3>
+<div class="outline-text-3" id="text-4-1">
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Prediction method</th>
+<th scope="col" class="org-right">RMSE</th>
+<th scope="col" class="org-right">Correct Pred.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Original paper (FLARE - Mean)</td>
+<td class="org-right">25.41</td>
+<td class="org-right">7</td>
+</tr>
+
+<tr>
+<td class="org-left">Original paper (FLARE - Median)</td>
+<td class="org-right">25.74</td>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-left">This work - Proposed Method (Mean)</td>
+<td class="org-right">25.98</td>
+<td class="org-right">2</td>
+</tr>
+
+<tr>
+<td class="org-left">This work - Proposed Method (Median)</td>
+<td class="org-right">27.73</td>
+<td class="org-right">1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="outline-container-org225ea64" class="outline-3">
+<h3 id="org225ea64"><span class="section-number-3">4.2.</span> Alarm Point Performance</h3>
+<div class="outline-text-3" id="text-4-2">
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Metric</th>
+<th scope="col" class="org-right">Author (Table 5)</th>
+<th scope="col" class="org-right">This work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Total test engines</td>
+<td class="org-right">100</td>
+<td class="org-right">100</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm later than failure</td>
+<td class="org-right">5</td>
+<td class="org-right">10</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm earlier than failure</td>
+<td class="org-right">95</td>
+<td class="org-right">90</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 40% of life</td>
+<td class="org-right">94</td>
+<td class="org-right">100</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 30% of life</td>
+<td class="org-right">87</td>
+<td class="org-right">94</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 20% of life</td>
+<td class="org-right">58</td>
+<td class="org-right">61</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 10% of life</td>
+<td class="org-right">22</td>
+<td class="org-right">25</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 5% of life</td>
+<td class="org-right">8</td>
+<td class="org-right">12</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+The reproduced alarm system matches the author&rsquo;s timing precision closely 
+(rows 4–8), but shows a higher late-alarm rate (10 vs. 5 engines) — 
+consistent with the RUL prediction variance observed in this reproduction 
+(std ≈ 23 cycles), which directly propagates into alarm-point safety margins.
+</p>
+<hr />
+</div>
+</div>
+</div>
+<div id="outline-container-orgcf6f67f" class="outline-2">
+<h2 id="orgcf6f67f"><span class="section-number-2">5.</span> Conclusion</h2>
+<div class="outline-text-2" id="text-5">
+<p>
+This reproduction demonstrates that the MFPCA-based pipeline proposed by
+Yildirim, Franco &amp; Lillo can be faithfully reimplemented from the published
+description, achieving an RMSE of 25.98 — within approximately 4% of the
+original paper&rsquo;s reported result (RMSE ≈ 25). The sensitivity analyses
+conducted throughout this work also highlight several implementation decisions
+left implicit in the original paper, such as the choice between joint and
+per-sensor distance formulations, which proved to have a substantial impact on
+prediction accuracy.
+</p>
+
+<p>
+More broadly, while modern AI and machine learning models — particularly deep
+neural networks — have achieved remarkable predictive performance in
+prognostics and health management, they often function as black boxes, offering
+little insight into <i>why</i> a particular prediction is made. This limitation
+motivates a deeper exploration of model-based statistical approaches such as the
+MFPCA pipeline reproduced here. These methods are inherently interpretable:
+each step — from functional smoothing to health-state labeling to similarity
+matching — carries a transparent statistical meaning, allowing practitioners to
+trace and justify every prediction. Moreover, such interpretable frameworks are
+not merely alternatives to AI/ML, but can serve as complementary tools to
+enhance the explainability of more complex data-driven systems — bridging the
+gap between predictive power and human understanding.
+</p>
+</div>
+</div>
+<div id="outline-container-orge31d594" class="outline-2">
+<h2 id="orge31d594"><span class="section-number-2">6.</span> Future Work</h2>
+<div class="outline-text-2" id="text-6">
+</div>
+<div id="outline-container-orge206be4" class="outline-3">
+<h3 id="orge206be4"><span class="section-number-3">6.1.</span> Normalization Refinement</h3>
+<div class="outline-text-3" id="text-6-1">
+<p>
+A Kneedle-based elbow detection on MFPC1-vs-cycle trajectories was considered as
+a way to segment normalization into pre-/post-degradation-onset phases. Given
+that all tested time-varying normalization schemes (median-based, std-scaled)
+underperformed the simpler static-mean normalization in this study, this
+direction was not pursued further, but may be worth revisiting with test units
+having longer observed trajectories.
+</p>
+</div>
+</div>
+<div id="outline-container-org8870b8d" class="outline-3">
+<h3 id="org8870b8d"><span class="section-number-3">6.2.</span> Extension to Multi-Operating-Condition Datasets</h3>
+<div class="outline-text-3" id="text-6-2">
+<p>
+This reproduction is limited to the FD001 subset (single operating condition,
+single fault mode). The FD002–FD004 subsets introduce six operating conditions
+and multiple fault modes, requiring operating-condition-aware normalization
+before the MFPCA step can be meaningfully applied. Extending the pipeline to
+these more challenging scenarios would test the generalizability of the
+functional data analysis approach under realistic industrial variability.
+</p>
+</div>
+</div>
+<div id="outline-container-org89b2202" class="outline-3">
+<h3 id="org89b2202"><span class="section-number-3">6.3.</span> Hybrid MFPCA + Neural Network Framework</h3>
+<div class="outline-text-3" id="text-6-3">
+<p>
+The k-NN similarity-matching scheme used for RUL prediction is simple and
+transparent, but may underutilize the information captured by the MFPCA health
+indices. A natural extension would be to use the MFPCA-derived scores as input
+features for a neural network predictor — retaining the interpretable
+feature-extraction stage while allowing a more flexible mapping from health
+state to remaining life. Comparing such a hybrid approach against both the
+current statistical pipeline and end-to-end deep learning baselines would
+clarify whether interpretable features combined with learned predictors offer a
+practical advantage in prognostic accuracy.
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org52956c1" class="outline-2">
+<h2 id="org52956c1"><span class="section-number-2">7.</span> Reference</h2>
+<div class="outline-text-2" id="text-7">
+</div>
+<div id="outline-container-org9712417" class="outline-3">
+<h3 id="org9712417"><span class="section-number-3">7.1.</span> Primary paper</h3>
+<div class="outline-text-3" id="text-7-1">
+<blockquote>
+<p>
+Yildirim, C., Lillo, R. E., &amp; Franco-Pereira, A. M. (2025). Health Prognostics in Multi-Sensor Systems Based on Multivariate Functional Data Analysis. Available at SSRN 4907886.
+</p>
+</blockquote>
+</div>
+</div>
+<div id="outline-container-org37f8f4b" class="outline-3">
+<h3 id="org37f8f4b"><span class="section-number-3">7.2.</span> Methodology &amp; Key Reference</h3>
+<div class="outline-text-3" id="text-7-2">
+<blockquote>
+<p>
+Happ, C., &amp; Greven, S. (2018). Multivariate functional principal component analysis for data observed on different (dimensional) domains. Journal of the American Statistical Association, 113(522), 649-659.
+</p>
+</blockquote>
+</div>
+</div>
+<div id="outline-container-orgbddc560" class="outline-3">
+<h3 id="orgbddc560"><span class="section-number-3">7.3.</span> Extras</h3>
+<div class="outline-text-3" id="text-7-3">
+<blockquote>
+<p>
+Saxena, Abhinav, et al. &ldquo;Damage propagation modeling for aircraft engine run-to-failure simulation.&rdquo; 2008 international conference on prognostics and health management. IEEE, 2008.
+</p>
+</blockquote>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: lznk</p>
+<p class="date">Created: 2026-08-13 T5 18:36</p>
+</div>
+</body>
+</html>

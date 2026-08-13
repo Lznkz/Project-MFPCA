@@ -1,0 +1,595 @@
+
+# Table of Contents
+
+1.  [Description](#org614934f)
+2.  [Methodology](#org39ed76d)
+    1.  [1. Time Domain Registration [0, 1]](#org3782538)
+    2.  [2. B-Spline Smoothing (From Discrete to Functional Data)](#orgaca1c12)
+    3.  [3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)](#orgcf28292)
+    4.  [4. Censored Test-Trajectory Smoothing & Candidate Matching (Adaptive Regression Spline)](#org09bc69a)
+    5.  [5. Similarity-based Distance Calculation](#orgd00800b)
+    6.  [6. RUL Prediction & Interpretation](#orga814692)
+3.  [Sensitivity Analysis](#org9ad7008)
+    1.  [Calculate distance using continuous curve or discrete point?](#org906c611)
+    2.  [Normalizing in Distance Calculation](#org7a247b6)
+    3.  [How did I really use Eq. 21](#org1b630c9)
+4.  [Results](#org0cd39c4)
+    1.  [RMSE table](#org6df8021)
+    2.  [Alarm Point Performance](#org3cf5ed9)
+5.  [Conclusion](#orgbfca481)
+6.  [Future Work](#org7be7061)
+    1.  [Normalization Refinement](#orgcaebaf7)
+    2.  [Extension to Multi-Operating-Condition Datasets](#org922d990)
+    3.  [Hybrid MFPCA + Neural Network Framework](#org47a8a69)
+7.  [Reference](#org01cb669)
+    1.  [Primary paper](#orgc93bf44)
+    2.  [Methodology & Key Reference](#org502aee0)
+    3.  [Extras](#org7fef16e)
+
+---
+
+
+<a id="org614934f"></a>
+
+# Description
+
+This repository reproduces the multivariate functional data analysis (MFPCA)
+pipeline from Yildirim, Franco & Lillo for predicting Remaining Useful Life
+(RUL) of turbofan engines, applied to the NASA C-MAPSS FD001 dataset.
+
+The pipeline combines B-spline smoothing with fleet-wide GCV-optimized
+penalization, multivariate functional principal component analysis (Happ &
+Greven, 2018) for health index construction, and a k-NN similarity-matching
+scheme for RUL prediction on right-censored test trajectories.
+
+This project was built independently as part of an undergraduate research
+portfolio in Applied Mathematics, with a focus on faithful method reproduction
+and transparent reporting of implementation decisions not fully specified in
+the original paper.
+
+**Result: RMSE ≈ 26.0 (mean-based prediction), within ~4% of the original paper&rsquo;s
+reported RMSE (~25).**
+
+---
+
+
+<a id="org39ed76d"></a>
+
+# Methodology
+
+
+<a id="org3782538"></a>
+
+## 1. Time Domain Registration [0, 1]
+
+Since each engine in the C-MAPSS dataset operates under varying degrees of
+initial wear and has a completely different lifespan (time to failure), the raw
+multivariate data does not share a common temporal frame. This step therefore
+rescales each engine&rsquo;s cycle index onto a common domain [0, 1], ensuring that
+degradation curves can be directly compared stage-by-stage (e.g., early-life vs.
+end-of-life) rather than cycle-by-cycle, without distorting the relative
+progression of degradation within each unit.
+
+
+<a id="orgaca1c12"></a>
+
+## 2. B-Spline Smoothing (From Discrete to Functional Data)
+
+-   Raw sensor data is typically noisy and discrete, and this also applies to
+    the C-MAPSS dataset used here. This step transforms these into continuous,
+    smooth functional curves using cubic B-Spline with a second-derivative
+    roughness penalty.
+-   In general, this implementation follows the original paper, which uses **Generalized
+    Cross-Validation** (GCV) to determine the smoothing parameter (&ldquo;single
+    $\lambda$ per sensor, optimized jointly across all training units&rdquo;), quadratic
+    penalty on the second derivative, cubic spline, 20 knots ⇒ 24 basis functions.
+-   By following the formulation of the original paper:
+
+$$GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)$$
+$$GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))]^2}$$
+where $n_i$ is the number of observed cycles for unit $i$, $MSE_i(\lambda)$ is
+the residual mean squared error, and $H_i(\lambda)$ is the smoother hat matrix. Generalized-Eigenvalue Parameterization (Demmler-Reinsch) was applied to
+evaluate $\text{trace}(H_i(\lambda))$ and $MSE_i(\lambda)$ efficiently, boosting
+computational performance. Also, these were implemented from scratch in Python (’scipy’,
+’scikit-fda’ basis objects), rather than relying on a higher-level
+smoothing-spline library.
+
+---
+
+
+<a id="orgcf28292"></a>
+
+## 3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)
+
+-   **Multivariate FPCA** (Happ & Greven, 2018) method extends the Karhunen–Loève
+    Expansion, which was used to overcome the complexity of physical degradation
+    dynamics in the CMAPSS dataset. As a result, **95.1%** of variance is explained by
+    only the first principal component.
+-   When examining the MFPC scores of the first PC in the training dataset, it can
+    actually be modeled as a mixture of two normal distributions. Using a
+    Gaussian Mixture Model, the training fleet can be split into two health-state
+    groups (&ldquo;low&rdquo;/&ldquo;big&rdquo; degradation rate).
+-   From [this paper](#org7fef16e) , it has been established that each engine operates with
+    unknown, varying degrees of initial wear and manufacturing variation — not all
+    engines are actually 100% identical. The first principal component scores
+    could be related to that wear and manufacturing variation. Therefore, using
+    the idea of the initial value of each sensor, all units can be labeled into two
+    health-states. Using the **Youden Index**, we validate this classification with a
+    mean Youden&rsquo;s J statistic of 0.90 averaged across all 9 sensors in the training dataset, indicating
+    strong discriminative power of the initial-value-based thresholds.
+-   By applying the Youden Index cutoff, each unit in the testing dataset can be
+
+categorized into one of two groups. Subsequently, candidate matches for each
+test unit are identified through validation with the respective training subset.
+
+
+<a id="org09bc69a"></a>
+
+## 4. Censored Test-Trajectory Smoothing & Candidate Matching (Adaptive Regression Spline)
+
+-   The units in the test dataset have varying lengths of recorded
+    cycles, which makes it very challenging to actually reuse the smoothing
+    parameter λ from the training dataset. (Also, in the paper, the author did not
+    actually mention which method he used for this process.)
+-   Therefore, instead of registering test units, both test units and training
+    candidates (which are truncated to the same cycles as their test unit) are
+    compared directly on the raw cycle domain [1, T<sub>test</sub>], where T<sub>test</sub> is the
+    number of cycles observed so far for a given test unit. As a result, an
+    **Adaptive Regression Spline** was used for each test unit and its candidates.
+    
+    > There is one additional condition to filter candidates, which keeps only training
+    > engines that have outlived the relevant test engine. On the other hand,
+    > training engines that fail earlier than the relevant test engine must be
+    > eliminated. In this dataset, there is only one exception that didn&rsquo;t have any
+    > candidates in its group; this may be caused by its initial value being very
+    > close to the Youden Index cutoff point. Although the author did not mention a
+    > solution for this case, the adopted approach is to switch the candidate search to the
+    > opposite health-state group.
+-   With adaptive knot selection (1 knot per ~4 observations), we address the
+    varying T<sub>test</sub> across units — a fixed basis size would otherwise cause
+    underfitting on long trajectories or rank-deficiency on short ones. Also,
+    **Cholesky Decomposition** was cached per unique T<sub>test</sub> value (not per unit) to
+    avoid redundant computation across the many (test unit, candidate) pairs
+    sharing the same length.
+
+
+<a id="orgd00800b"></a>
+
+## 5. Similarity-based Distance Calculation
+
+-   The next step is to calculate the distance between a test system’s sensor
+    curve and training system curves in the same group. By using Euclidean
+    ($L^2$) distance as it is the natural measure between two points in Euclidean
+    space and represents the length of the line segment connecting two points
+-   Before computing distance, each sensor’s smoothed values are normalized by
+    dividing by the sensor’s mean value (computed across the full training set),
+    following Eq. (20) of the original paper — this prevents sensors with larger
+    raw magnitude (e.g., temperature, hundreds) from dominating the distance
+    metric over sensors with smaller magnitude (e.g., pressure ratios)
+    
+    $$u_{ij}^{\ast}(t) = \frac{X_{ij}^{\ast}(t)}{\bar{X}_{j}^{\ast}(t)} \quad
+      \text{i=1,....,n} \quad \text{j=1,....,J}$$
+    
+    where $X_{ij}^{\ast}(t)$ is the sensor value of the ith system and the jth
+    sensor at time t, $\bar{X}_{j}^{*}(t)$ is the mean of the jth sensor, and J is
+    the number of sensors.
+
+-   After that, the distance between the two engine curves in a multivariate sense
+    is expressed as:
+    
+    $$d_{x,y}(t) = \sqrt{\sum_{j=1}^{J} (x_j(t) - y_j(t))^2}$$
+
+---
+
+-   Before computing distance, each sensor&rsquo;s evaluated values are normalized by
+    dividing by $\bar X_j(t)$, the mean (or median) of that sensor&rsquo;s value across
+    candidates at each of the 20 grid points, following the intent of Eq. (20) of
+    the original paper — this prevents sensors with larger raw magnitude from
+    dominating the distance metric over sensors with smaller magnitude.
+
+> Several time-varying normalization schemes were tested (mean vs. median as the
+> center, with and without an additional per-timepoint standard deviation
+> scaling). All variants performed similarly or worse than the simplest
+> static-mean normalization; standard-deviation scaling in particular tended to
+> flatten meaningful variation across candidates and degraded RMSE. The original
+> static-mean formulation was therefore kept.
+
+-   Since candidate trajectories have varying lengths (T<sub>test</sub>), each fitted spline
+    is evaluated at a fixed grid of 20 points spanning [1, T<sub>test</sub>], rather than at
+    the full set of raw observation cycles. This provides a common, fixed-length
+    representation for every (test unit, candidate) pair, which is required before
+    a pointwise Euclidean distance can be computed — comparing curves of different
+    raw lengths directly would otherwise be undefined.
+-   Two formulations of multivariate Euclidean distance were then compared:
+
+> Empirically, per-sensor sum reduced RMSE from ~30 to 25.99, matching the
+> author&rsquo;s actual implementation rather than the text of Eq. (21). Investigating
+> why: post-normalization variance varies roughly 60-fold across the 9 sensors
+> (from $1.1e-7$ for T24 to $7.0e-6$ for T50). Under the joint formula, this imbalance
+> lets 2-3 high-variance sensors dominate the squared sum, effectively discarding
+> information from the remaining sensors. The per-sensor-summed formula avoids
+> this by weighting each sensor&rsquo;s contribution additively rather than
+> quadratically-jointly, explaining both its empirical advantage and its agreement
+> with the author&rsquo;s code.
+
+---
+
+
+<a id="orga814692"></a>
+
+## 6. RUL Prediction & Interpretation
+
+-   After computing the distance between each test engine and its candidates,
+    the $k$ nearest training candidates (minimum distance) are selected for
+    RUL prediction. Each candidate&rsquo;s RUL is defined as its full lifespan
+    minus the test engine&rsquo;s observed cycles T<sub>test</sub>; the final RUL
+    prediction is the mean or median of the $k$ candidates&rsquo; RUL
+    values.
+-   Beyond RUL point prediction, the first and second derivatives of the
+    smoothed health-index curves are also computed for better interpretability,
+    following the interpretability approach described in the original paper.
+-   The second derivative in particular is used to define a dynamic
+    **maintenance alarm point**: for each test engine, an alarm is triggered
+    at 80% of the predicted total lifespan ($0.8 \times (T_{test} +
+      \widehat{RUL})$), analogous to the alarm-point evaluation in the
+    original paper ([Result Table](#org3cf5ed9))
+
+
+<a id="org9ad7008"></a>
+
+# Sensitivity Analysis
+
+
+<a id="org906c611"></a>
+
+## Calculate distance using continuous curve or discrete point?
+
+-   As shown in Eq. 21, the use of $d_{x,y}(t)$ suggests the author intended
+    to calculate distance over a continuous curve. However, as previously
+    mentioned, each test unit has a different number of observed cycles
+    (T<sub>test</sub>). If distance were accumulated over every raw cycle, a unit
+    with 200 observed cycles would sum many more terms than a unit with 50
+    cycles — making the resulting total distance not directly comparable
+    across test units, independent of how similar the curves actually are.
+-   To resolve this, the fitted spline for each test unit and its candidates
+    is instead evaluated at 20 discrete, equally spaced points spanning its
+    own observed range [1, T<sub>test</sub>]. This gives every (test unit, candidate)
+    comparison a fixed-length representation, making distances comparable
+    across test units regardless of how many cycles were actually observed.
+
+
+<a id="org7a247b6"></a>
+
+## Normalizing in Distance Calculation
+
+-   In Eq. 20, $X_{i,j}^{\ast}(t)$ is normalized by $\bar X_j^{*}(t)$, described
+    in the paper only as &ldquo;the mean of the jth sensor&rdquo;. This leaves an ambiguity:
+    is the mean taken across time (i.e., a single scalar per sensor, constant
+    across the 20 grid points), or across units at each fixed time point (i.e., a
+    value that varies with $t$)? The paper&rsquo;s notation $\bar X_j^{*}(t)$ — which
+    still carries a $(t)$ — suggests the latter, but this was not explicitly
+    confirmed.
+-   Both interpretations were tested: a static per-sensor mean (constant across
+    time) and a time-varying mean (recomputed at each of the 20 points from the
+    candidate group). Empirically, neither choice affected RMSE meaningfully, so
+    the simpler static formulation was kept for the final pipeline.
+
+
+<a id="org1b630c9"></a>
+
+## How did I really use Eq. 21
+
+-   While the previous section addressed how $\bar X_j^{\ast}(t)$ is computed, Eq.
+    21 leaves a separate question open: **how are the 9 per-sensor squared
+    differences combined** into a single distance? Two interpretations are possible:
+    
+    -   The Aggregated Euclidean Distance (Denoted as $D_{joint}$)
+    
+    $$D_{joint} = \sqrt{\sum_{j=1}^{9}\sum_{t=1}^{20} (x_j(t) - y_j(t))^2}$$
+    
+    -   The Independent Approach (Denoted as $D_{sum}$)
+    
+    $$D_{sum} = \sum_{j=1}^{9} \sqrt{\sum_{t=1}^{20} (x_j(t) - y_j(t))^2}$$
+-   Unlike the normalization question, this choice had a large effect: per-sensor
+    sum reduced RMSE substantially over the joint formula.  By checking
+    post-normalization variance across the 9 sensors, the reason becomes clear.
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Sensor</th>
+<th scope="col" class="org-right">Variance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">T50</td>
+<td class="org-right">6.749795e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">Ps30</td>
+<td class="org-right">5.368794e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">W31</td>
+<td class="org-right">3.871824e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">W32</td>
+<td class="org-right">3.719131e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">BPR</td>
+<td class="org-right">3.390728e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">T30</td>
+<td class="org-right">2.795378e-06</td>
+</tr>
+
+<tr>
+<td class="org-left">P30</td>
+<td class="org-right">4.707642e-07</td>
+</tr>
+
+<tr>
+<td class="org-left">phi</td>
+<td class="org-right">3.662537e-07</td>
+</tr>
+
+<tr>
+<td class="org-left">T24</td>
+<td class="org-right">1.109373e-07</td>
+</tr>
+</tbody>
+</table>
+
+-> It ranges roughly 60-fold, from 1.1e-7 (T24) to 6.75e-6 (T50). Under the
+joint formula, squaring before summing lets these 2-3 high-variance sensors
+dominate the total distance, effectively silencing the remaining sensors. The
+per-sensor-summed formula avoids this, since each sensor contributes exactly
+one additive term regardless of its variance.
+
+
+<a id="org0cd39c4"></a>
+
+# Results
+
+
+<a id="org6df8021"></a>
+
+## RMSE table
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Prediction method</th>
+<th scope="col" class="org-right">RMSE</th>
+<th scope="col" class="org-right">Correct Pred.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Original paper (FLARE - Mean)</td>
+<td class="org-right">25.41</td>
+<td class="org-right">7</td>
+</tr>
+
+<tr>
+<td class="org-left">Original paper (FLARE - Median)</td>
+<td class="org-right">25.74</td>
+<td class="org-right">1</td>
+</tr>
+
+<tr>
+<td class="org-left">This work - Proposed Method (Mean)</td>
+<td class="org-right">25.98</td>
+<td class="org-right">2</td>
+</tr>
+
+<tr>
+<td class="org-left">This work - Proposed Method (Median)</td>
+<td class="org-right">27.73</td>
+<td class="org-right">1</td>
+</tr>
+</tbody>
+</table>
+
+
+<a id="org3cf5ed9"></a>
+
+## Alarm Point Performance
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Metric</th>
+<th scope="col" class="org-right">Author (Table 5)</th>
+<th scope="col" class="org-right">This work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Total test engines</td>
+<td class="org-right">100</td>
+<td class="org-right">100</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm later than failure</td>
+<td class="org-right">5</td>
+<td class="org-right">10</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm earlier than failure</td>
+<td class="org-right">95</td>
+<td class="org-right">90</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 40% of life</td>
+<td class="org-right">94</td>
+<td class="org-right">100</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 30% of life</td>
+<td class="org-right">87</td>
+<td class="org-right">94</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 20% of life</td>
+<td class="org-right">58</td>
+<td class="org-right">61</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 10% of life</td>
+<td class="org-right">22</td>
+<td class="org-right">25</td>
+</tr>
+
+<tr>
+<td class="org-left">Alarm in last 5% of life</td>
+<td class="org-right">8</td>
+<td class="org-right">12</td>
+</tr>
+</tbody>
+</table>
+
+The reproduced alarm system matches the author&rsquo;s timing precision closely 
+(rows 4–8), but shows a higher late-alarm rate (10 vs. 5 engines) — 
+consistent with the RUL prediction variance observed in this reproduction 
+(std ≈ 23 cycles), which directly propagates into alarm-point safety margins.
+
+---
+
+
+<a id="orgbfca481"></a>
+
+# Conclusion
+
+This reproduction demonstrates that the MFPCA-based pipeline proposed by
+Yildirim, Franco & Lillo can be faithfully reimplemented from the published
+description, achieving an RMSE of 25.98 — within approximately 4% of the
+original paper&rsquo;s reported result (RMSE ≈ 25). The sensitivity analyses
+conducted throughout this work also highlight several implementation decisions
+left implicit in the original paper, such as the choice between joint and
+per-sensor distance formulations, which proved to have a substantial impact on
+prediction accuracy.
+
+More broadly, while modern AI and machine learning models — particularly deep
+neural networks — have achieved remarkable predictive performance in
+prognostics and health management, they often function as black boxes, offering
+little insight into *why* a particular prediction is made. This limitation
+motivates a deeper exploration of model-based statistical approaches such as the
+MFPCA pipeline reproduced here. These methods are inherently interpretable:
+each step — from functional smoothing to health-state labeling to similarity
+matching — carries a transparent statistical meaning, allowing practitioners to
+trace and justify every prediction. Moreover, such interpretable frameworks are
+not merely alternatives to AI/ML, but can serve as complementary tools to
+enhance the explainability of more complex data-driven systems — bridging the
+gap between predictive power and human understanding.
+
+
+<a id="org7be7061"></a>
+
+# Future Work
+
+
+<a id="orgcaebaf7"></a>
+
+## Normalization Refinement
+
+A Kneedle-based elbow detection on MFPC1-vs-cycle trajectories was considered as
+a way to segment normalization into pre-/post-degradation-onset phases. Given
+that all tested time-varying normalization schemes (median-based, std-scaled)
+underperformed the simpler static-mean normalization in this study, this
+direction was not pursued further, but may be worth revisiting with test units
+having longer observed trajectories.
+
+
+<a id="org922d990"></a>
+
+## Extension to Multi-Operating-Condition Datasets
+
+This reproduction is limited to the FD001 subset (single operating condition,
+single fault mode). The FD002–FD004 subsets introduce six operating conditions
+and multiple fault modes, requiring operating-condition-aware normalization
+before the MFPCA step can be meaningfully applied. Extending the pipeline to
+these more challenging scenarios would test the generalizability of the
+functional data analysis approach under realistic industrial variability.
+
+
+<a id="org47a8a69"></a>
+
+## Hybrid MFPCA + Neural Network Framework
+
+The k-NN similarity-matching scheme used for RUL prediction is simple and
+transparent, but may underutilize the information captured by the MFPCA health
+indices. A natural extension would be to use the MFPCA-derived scores as input
+features for a neural network predictor — retaining the interpretable
+feature-extraction stage while allowing a more flexible mapping from health
+state to remaining life. Comparing such a hybrid approach against both the
+current statistical pipeline and end-to-end deep learning baselines would
+clarify whether interpretable features combined with learned predictors offer a
+practical advantage in prognostic accuracy.
+
+
+<a id="org01cb669"></a>
+
+# Reference
+
+
+<a id="orgc93bf44"></a>
+
+## Primary paper
+
+> Yildirim, C., Lillo, R. E., & Franco-Pereira, A. M. (2025). Health Prognostics in Multi-Sensor Systems Based on Multivariate Functional Data Analysis. Available at SSRN 4907886.
+
+
+<a id="org502aee0"></a>
+
+## Methodology & Key Reference
+
+> Happ, C., & Greven, S. (2018). Multivariate functional principal component analysis for data observed on different (dimensional) domains. Journal of the American Statistical Association, 113(522), 649-659.
+
+
+<a id="org7fef16e"></a>
+
+## Extras
+
+> Saxena, Abhinav, et al. &ldquo;Damage propagation modeling for aircraft engine run-to-failure simulation.&rdquo; 2008 international conference on prognostics and health management. IEEE, 2008.
+
