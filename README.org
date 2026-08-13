@@ -22,15 +22,6 @@ reported RMSE (~25).*
 
 -----
 
-* Pipeline
-[[id:f60b52f0-e6b7-44be-9370-764cd8ef0246][1. Time Domain Registration [0, 1]​]]
-[[id:643731f9-ae57-426d-895a-a82fae217289][2. B-Spline Smoothing (From Discrete to Functional Data)]].
-[[id:5426889c-ceff-4362-9971-1a226d495d0f][3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)]]
-[[id:a7fbefb1-2133-462e-9e8d-060805dbd6e7][4. Censored Test-Trajectory Smoothing & Candidate Matching (Adaptive Regression Spline)]]
-[[id:9d3ade06-ef9c-4873-a218-6c4bf737ab47][5. Similarity-based Distance Calculation]]
-[[id:2ed29f91-71d2-4ee5-9c55-8e64ffaaf6f1][6. RUL Prediction & Interpretation]]
------
-
 * Methodology
 ** 1. Time Domain Registration [0, 1]
 :PROPERTIES:
@@ -57,14 +48,12 @@ progression of degradation within each unit.
   penalty on the second derivative, cubic spline, 20 knots ⇒ 24 basis functions.
 - By following the formulation of the original paper:
 $$GCV(\lambda) = \frac{1}{n}\sum_{i=1}^{n} GCV_i(\lambda)$$
-$$GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))\2}$$
-
+$$GCV_i(\lambda) = \frac{(n_i+1)\ MSE_i(\lambda)}{[\text{trace}(I - H_i(\lambda))]^2}$$
 where $n_i$ is the number of observed cycles for unit $i$, $MSE_i(\lambda)$ is
-the residual mean squared error, and $H_i(\lambda)$ is the smoother hat matrix.
-*Generalized-Eigenvalue Parameterization* (Demmler-Reinsch) was applied to
+the residual mean squared error, and $H_i(\lambda)$ is the smoother hat matrix. Generalized-Eigenvalue Parameterization (Demmler-Reinsch) was applied to
 evaluate $\text{trace}(H_i(\lambda))$ and $MSE_i(\lambda)$ efficiently, boosting
-computational performance. Also, these were implemented from scratch in Python ('scipy',
-'scikit-fda' basis objects), rather than relying on a higher-level
+computational performance. Also, these were implemented from scratch in Python (’scipy’,
+’scikit-fda’ basis objects), rather than relying on a higher-level
 smoothing-spline library.
 -----
 ** 3. Feature Extraction & Health-State Labeling (MFPCA, GMM, Youden Index)
@@ -79,7 +68,7 @@ smoothing-spline library.
   actually be modeled as a mixture of two normal distributions. Using a
   Gaussian Mixture Model, the training fleet can be split into two health-state
   groups ("low"/"big" degradation rate).
-- From [[*Extras*][this paper]], it has been established that each engine operates with
+- From [[id:44199cec-194d-4795-9fb2-27f26680b04c][this paper]] , it has been established that each engine operates with
   unknown, varying degrees of initial wear and manufacturing variation — not all
   engines are actually 100% identical. The first principal component scores
   could be related to that wear and manufacturing variation. Therefore, using
@@ -128,20 +117,23 @@ test unit are identified through validation with the respective training subset.
   curve and training system curves in the same group. By using Euclidean
   ($L^2$) distance as it is the natural measure between two points in Euclidean
   space and represents the length of the line segment connecting two points
-- Before computing distance, each sensor's smoothed values are normalized by
-  dividing by the sensor's mean value (computed across the full training set),
+- Before computing distance, each sensor’s smoothed values are normalized by
+  dividing by the sensor’s mean value (computed across the full training set),
   following Eq. (20) of the original paper — this prevents sensors with larger
   raw magnitude (e.g., temperature, hundreds) from dominating the distance
   metric over sensors with smaller magnitude (e.g., pressure ratios)
-  $$u_{ij}^{\ast}(t) = \frac{{X_{ij}^{\ast}(t)}{\bar X_{j}^{\ast}(t)} \quad \text{i=1,....,n} \quad \text{j=1,....,J}$$
-  where ${X_{ij}^{\ast}(t)}$ is the sensor value of the ith system and the jth
-  sensor at time t, $\bar{X}_{j}^{*}(t)$ is the mean of the jth sensor, and J is the
-  number of sensors
+
+  $$u_{ij}^{\ast}(t) = \frac{X_{ij}^{\ast}(t)}{\bar{X}_{j}^{\ast}(t)} \quad
+  \text{i=1,....,n} \quad \text{j=1,....,J}$$
+
+  where $X_{ij}^{\ast}(t)$ is the sensor value of the ith system and the jth
+  sensor at time t, $\bar{X}_{j}^{*}(t)$ is the mean of the jth sensor, and J is
+  the number of sensors.
+
 - After that, the distance between the two engine curves in a multivariate sense
   is expressed as:
-  $$
-  d_{x,y}(t) = \sqrt{\sum_{j=1}^{J} (x_j(t) - y_j(t))^2}
-  $$
+
+  $$d_{x,y}(t) = \sqrt{\sum_{j=1}^{J} (x_j(t) - y_j(t))^2}$$
 -----
 - Before computing distance, each sensor's evaluated values are normalized by
   dividing by $\bar X_j(t)$, the mean (or median) of that sensor's value across
@@ -167,7 +159,7 @@ static-mean formulation was therefore kept.
 Empirically, per-sensor sum reduced RMSE from ~30 to 25.99, matching the
 author's actual implementation rather than the text of Eq. (21). Investigating
 why: post-normalization variance varies roughly 60-fold across the 9 sensors
-(from 1.1e-7 for T24 to 7.0e-6 for T50). Under the joint formula, this imbalance
+(from $1.1e-7$ for T24 to $7.0e-6$ for T50). Under the joint formula, this imbalance
 lets 2-3 high-variance sensors dominate the squared sum, effectively discarding
 information from the remaining sensors. The per-sensor-summed formula avoids
 this by weighting each sensor's contribution additively rather than
@@ -233,6 +225,7 @@ with the author's code.
 - Unlike the normalization question, this choice had a large effect: per-sensor
   sum reduced RMSE substantially over the joint formula.  By checking
   post-normalization variance across the 9 sensors, the reason becomes clear.
+
 | Sensor |     Variance |
 |--------+--------------|
 | T50    | 6.749795e-06 |
@@ -244,6 +237,7 @@ with the author's code.
 | P30    | 4.707642e-07 |
 | phi    | 3.662537e-07 |
 | T24    | 1.109373e-07 |
+
   -> It ranges roughly 60-fold, from 1.1e-7 (T24) to 6.75e-6 (T50). Under the
   joint formula, squaring before summing lets these 2-3 high-variance sensors
   dominate the total distance, effectively silencing the remaining sensors. The
@@ -331,17 +325,20 @@ practical advantage in prognostic accuracy.
 
 * Reference
 
-** *Primary paper (reproduced in this repository):*
+** Primary paper
 #+BEGIN_QUOTE
 Yildirim, C., Lillo, R. E., & Franco-Pereira, A. M. (2025). Health Prognostics in Multi-Sensor Systems Based on Multivariate Functional Data Analysis. Available at SSRN 4907886.
 #+END_QUOTE
 
-** *Methodology & Key Reference*
+** Methodology & Key Reference
 #+BEGIN_QUOTE
 Happ, C., & Greven, S. (2018). Multivariate functional principal component analysis for data observed on different (dimensional) domains. Journal of the American Statistical Association, 113(522), 649-659.
 #+END_QUOTE
 
-** *Extras*
+** Extras
+:PROPERTIES:
+:ID:       44199cec-194d-4795-9fb2-27f26680b04c
+:END:
 #+BEGIN_QUOTE
 Saxena, Abhinav, et al. "Damage propagation modeling for aircraft engine run-to-failure simulation." 2008 international conference on prognostics and health management. IEEE, 2008.
 #+END_QUOTE
